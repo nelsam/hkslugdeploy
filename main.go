@@ -19,6 +19,7 @@ import (
 
 import (
 	"os"
+	"os/exec"
 	"os/user"
 )
 
@@ -222,6 +223,36 @@ func githubUploadAttachment(uploadURL string, attachment string, token string) {
 	defer resp.Body.Close()
 	if resp.StatusCode >= http.StatusBadRequest {
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
-		log.Fatalf("Github asset upload return status %s with response:\n%s", resp.Status, string(bodyBytes))
+		log.Printf("Github asset upload return status %s with response:\n%s", resp.Status, string(bodyBytes))
+
+		// This is frustrating ... I can't figure out why, but go's requests
+		// usually fail when performing the asset upload, while curl works
+		// fine when sending what I believe to be the exact same request.
+		log.Print("Trying again with shell call to curl...")
+		cmd := curlCommand(req)
+		if output, err := cmd.Output(); err != nil {
+			log.Fatalf("Received error %s from curl, with output:\n%s", err, string(output))
+		}
 	}
+}
+
+func curlCommand(req *http.Request) *exec.Cmd {
+	// I chose a buffer of len(req.Header)*2 since many header entries
+	// can have multiple values, so this gets us closer to having enough
+	// room for everything, without going overboard.  Hopefully.
+	args := make([]string, 0, len(req.Header)*2)
+	args = append(args, "-X", req.Method)
+	for name, values := range req.Header {
+		for _, value := range values {
+			args = append(args, "-H", fmt.Sprintf("%s: %s", name, value))
+		}
+	}
+	if req.Body != nil {
+		// Body must be a file for us to be able to use it.
+		filename := req.Body.(*os.File).Name()
+		args = append(args, "--data-binary", fmt.Sprintf("@%s", filename))
+	}
+	args = append(args, req.URL.String())
+	log.Printf("Created curl command: %s", fmt.Sprintf("curl %s", strings.Join(args, " ")))
+	return exec.Command("curl", args...)
 }
