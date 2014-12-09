@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -16,6 +17,7 @@ const (
 
 var (
 	sequential        bool
+	clean             bool
 	tarName           string
 	githubReleaseName string
 	githubReleaseDesc string
@@ -32,6 +34,8 @@ var (
 func init() {
 	flag.BoolVar(&sequential, "sequential", false,
 		"Enable this flag if you don't want releases to run concurrently.")
+	flag.BoolVar(&clean, "clean", false,
+		"Clean up any files that are created during deployment (including the release tarball).")
 	flag.StringVar(&tarName, "tarball-name", "release.tar.gz",
 		"The name of the release tarball file that will be uploaded to github.")
 	flag.StringVar(&githubRepo, "github-repo", "",
@@ -52,6 +56,15 @@ func init() {
 		"The email address for logging in to heroku.")
 	flag.StringVar(&herokuKey, "heroku-token", "",
 		"The password or access token to use when logging in to heroku.")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "usage: %s [options] release_files...\n\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Creates a heroku slug tarball (.tar.gz) out of the provided release_files, and "+
+			"optionally uploads the slug tarball to a github release and/or deploys it to heroku.  Make sure "+
+			"that you provide *all* github options if you want to create a github release with the resulting "+
+			"tarball, and the same for heroku if you want to deploy the slug to heroku.\n\n")
+		fmt.Fprint(os.Stderr, "options:\n")
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 	selectedFilenames = flag.Args()
 }
@@ -78,7 +91,9 @@ func main() {
 	for _, wait := range waiting {
 		<-wait
 	}
-	if err := os.Remove(tarName); err != nil {
-		log.Fatal(err)
+	if clean {
+		if err := os.Remove(tarName); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
