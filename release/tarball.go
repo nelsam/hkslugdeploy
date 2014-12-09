@@ -97,7 +97,7 @@ func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, directory string,
 		}
 		// As in writeAppDir, "./" always needs to preceed entries in a
 		// heroku slug.
-		tarHeader.Name = "./" + path.Join(destPrefix, tarHeader.Name)
+		tarHeader.Name = "./" + path.Join(destPrefix, srcName)
 		tarball.WriteHeader(tarHeader)
 		io.Copy(tarball, src)
 
