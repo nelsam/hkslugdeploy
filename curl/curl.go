@@ -2,19 +2,18 @@ package curl
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"strings"
 )
 
-func Command(req *http.Request) *exec.Cmd {
+func Command(req *http.Request, extraArgs ...string) *exec.Cmd {
 	// I chose a buffer of len(req.Header)*2 since many header entries
 	// can have multiple values, so this gets us closer to having enough
 	// room for everything, without going overboard.  Hopefully.
 	args := make([]string, 0, len(req.Header)*2)
 	args = append(args, "-X", req.Method)
+	args = append(args, extraArgs...)
 	for name, values := range req.Header {
 		for _, value := range values {
 			args = append(args, "-H", fmt.Sprintf("%s: %s", name, value))
@@ -26,6 +25,5 @@ func Command(req *http.Request) *exec.Cmd {
 		args = append(args, "--data-binary", fmt.Sprintf("@%s", filename))
 	}
 	args = append(args, req.URL.String())
-	log.Printf("Created curl command: %s", fmt.Sprintf("curl %s", strings.Join(args, " ")))
 	return exec.Command("curl", args...)
 }

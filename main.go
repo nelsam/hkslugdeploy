@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"log"
+	"os"
 
 	"github.com/nelsam/hkslugdeploy/github"
 	"github.com/nelsam/hkslugdeploy/heroku"
@@ -9,10 +11,11 @@ import (
 )
 
 const (
-	herokuAppDir = "app"
+	herokuAppDir = "./app"
 )
 
 var (
+	sequential        bool
 	tarName           string
 	githubReleaseName string
 	githubReleaseDesc string
@@ -27,6 +30,8 @@ var (
 )
 
 func init() {
+	flag.BoolVar(&sequential, "sequential", false,
+		"Enable this flag if you don't want releases to run concurrently.")
 	flag.StringVar(&tarName, "tarball-name", "release.tar.gz",
 		"The name of the release tarball file that will be uploaded to github.")
 	flag.StringVar(&githubRepo, "github-repo", "",
@@ -39,7 +44,7 @@ func init() {
 		"The name to use when creating a release on github.")
 	flag.StringVar(&githubReleaseDesc, "github-release-desc", "",
 		"A description of this release for uploading to github.")
-	flag.StringVar(&herokuApp, "app", "",
+	flag.StringVar(&herokuApp, "heroku-app", "",
 		"Your heroku app's name.")
 	flag.StringVar(&herokuWebProc, "heroku-web-proc", "",
 		"The web process type to use when creating a heroku slug.")
@@ -53,6 +58,27 @@ func init() {
 
 func main() {
 	release.CreateTarball(tarName, herokuAppDir, selectedFilenames)
-	github.Release(githubReleaseName, githubReleaseDesc, gitCommitish, githubRepo, githubToken, tarName)
-	heroku.Release(herokuApp, map[string]string{"web": herokuWebProc}, herokuEmail, herokuKey, tarName)
+	waiting := make([]chan bool, 0, 2)
+	if githubRepo != "" {
+		done := github.StartRelease(githubReleaseName, githubReleaseDesc, gitCommitish, githubRepo, githubToken, tarName)
+		if sequential {
+			<-done
+		} else {
+			waiting = append(waiting, done)
+		}
+	}
+	if herokuApp != "" {
+		done := heroku.StartRelease(herokuApp, map[string]string{"web": herokuWebProc}, herokuEmail, herokuKey, tarName)
+		if sequential {
+			<-done
+		} else {
+			waiting = append(waiting, done)
+		}
+	}
+	for _, wait := range waiting {
+		<-wait
+	}
+	if err := os.Remove(tarName); err != nil {
+		log.Fatal(err)
+	}
 }

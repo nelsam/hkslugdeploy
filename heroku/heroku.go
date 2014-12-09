@@ -4,36 +4,53 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	heroku "github.com/bgentry/heroku-go"
+	"github.com/nelsam/hkslugdeploy/curl"
 )
 
+func StartRelease(app string, procs map[string]string, email string, key string, build string) chan bool {
+	done := make(chan bool)
+	go func() {
+		Release(app, procs, email, key, build)
+		done <- true
+	}()
+	return done
+}
+
 func Release(app string, procs map[string]string, email string, key string, build string) {
-	client := heroku.Client{Username: email, Password: key}
+	client := &heroku.Client{Username: email, Password: key}
+	log.Print("[heroku] Creating release slug")
 	slug, err := client.SlugCreate(app, procs, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[heroku][error] %s", err)
 	}
 	body, err := os.Open(build)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[heroku][error] %s", err)
 	}
 	defer body.Close()
+	slug.Blob.Method = strings.ToUpper(slug.Blob.Method)
 	req, err := http.NewRequest(slug.Blob.Method, slug.Blob.URL, body)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("[heroku][error] %s", err)
 	}
-	req.Header.Set("Content-Type", "application/x-gtar")
-	resp, err := new(http.Client).Do(req)
-	if err != nil {
-		log.Fatal(err)
+
+	// Because Amazon has one of the worst APIs on the planet, we can't
+	// send a proper request to it.  It requires the Content-Type header
+	// to be empty, but Go appears to correct empty Content-Type headers
+	// (although I can't find out exactly where this is happening).
+	// Instead, we need to send a request via curl.
+	cmd := curl.Command(req, "-H", "Content-Type:")
+	log.Print("[heroku] Uploading build")
+	output, err := cmd.Output()
+	if err != nil || strings.Contains(string(output), "<error>") {
+		log.Fatalf("[heroku][error] Received curl error %v with body:\n%s", err, string(output))
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= http.StatusBadRequest {
-		log.Fatalf("Received status %s from slug upload", resp.Status)
+	log.Printf("[heroku] Publishing release")
+	if _, err = client.ReleaseCreate(app, slug.Id, nil); err != nil {
+		log.Fatalf("[heroku][error] %s", err)
 	}
-	_, err = client.ReleaseCreate(app, slug.Id, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	log.Print("[heroku] Done")
 }

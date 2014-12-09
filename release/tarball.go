@@ -17,14 +17,7 @@ const (
 )
 
 func CreateTarball(name string, topLevelFolder string, srcFilenames []string) {
-	srcFiles := make([]os.FileInfo, 0, len(srcFilenames))
-	for _, f := range srcFilenames {
-		finfo, err := os.Stat(f)
-		if err != nil {
-			log.Fatal(err)
-		}
-		srcFiles = append(srcFiles, finfo)
-	}
+	log.Print("[release] Creating tarball")
 	targetFile, err := os.Create(name)
 	if err != nil {
 		log.Fatal(err)
@@ -42,8 +35,19 @@ func CreateTarball(name string, topLevelFolder string, srcFilenames []string) {
 			log.Fatal(err)
 		}
 	}()
+
+	log.Print("[release] Writing fake top level directory to tarball")
 	writeAppDir(tarball, topLevelFolder)
-	archiveFiles(tarball, srcFiles, topLevelFolder)
+
+	log.Print("[release] Adding requested files to archive")
+	for _, f := range srcFilenames {
+		finfo, err := os.Stat(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+		dir := path.Dir(f)
+		archiveFiles(tarball, []os.FileInfo{finfo}, dir, topLevelFolder)
+	}
 }
 
 func writeAppDir(tarball *tar.Writer, appDir string) {
@@ -61,7 +65,7 @@ func writeAppDir(tarball *tar.Writer, appDir string) {
 	}
 	now := time.Now()
 	header := &tar.Header{
-		Name:       "app/",
+		Name:       appDir,
 		Mode:       int64(os.ModePerm | tarIsDir),
 		Uid:        uid,
 		Gid:        gid,
@@ -73,9 +77,12 @@ func writeAppDir(tarball *tar.Writer, appDir string) {
 	tarball.WriteHeader(header)
 }
 
-func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, destPrefix string) {
+func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, directory string, destPrefix string) {
 	for _, finfo := range srcFiles {
 		srcName := finfo.Name()
+		if directory != "" {
+			srcName = path.Join(directory, srcName)
+		}
 		dstName := path.Join(destPrefix, srcName)
 
 		src, err := os.Open(srcName)
@@ -97,7 +104,7 @@ func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, destPrefix string
 			if err != nil {
 				log.Fatal(err)
 			}
-			archiveFiles(tarball, contents, dstName)
+			archiveFiles(tarball, contents, srcName, dstName)
 		}
 	}
 }
