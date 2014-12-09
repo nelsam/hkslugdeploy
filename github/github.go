@@ -39,8 +39,8 @@ func releaseUploadURL(releaseName string, releaseDesc string, commitish string, 
 		"target_commitish": commitish,
 		"name":             releaseName,
 		"body":             releaseDesc,
-		"draft":            true,
-		"prerelease":       true,
+		"draft":            false,
+		"prerelease":       false,
 	}
 	bodyBytes, err := json.Marshal(bodyMap)
 	if err != nil {

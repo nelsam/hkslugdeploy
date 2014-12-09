@@ -48,10 +48,10 @@ func init() {
 		"Your heroku app's name.")
 	flag.StringVar(&herokuWebProc, "heroku-web-proc", "",
 		"The web process type to use when creating a heroku slug.")
-	flag.StringVar(&herokuEmail, "heroku-email", "",
+	flag.StringVar(&herokuEmail, "heroku-login", "",
 		"The email address for logging in to heroku.")
-	flag.StringVar(&herokuKey, "heroku-password", "",
-		"The password or access key to use when logging in to heroku.")
+	flag.StringVar(&herokuKey, "heroku-token", "",
+		"The password or access token to use when logging in to heroku.")
 	flag.Parse()
 	selectedFilenames = flag.Args()
 }
