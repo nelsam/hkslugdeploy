@@ -92,7 +92,7 @@ func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, directory string,
 		defer src.Close()
 
 		symlink := ""
-		if finfo.Mode()|os.ModeType == os.ModeSymlink {
+		if finfo.Mode()&os.ModeType == os.ModeSymlink {
 			symlink, err = os.Readlink(srcName)
 			if err != nil {
 				log.Fatalf("[release][error] %s", err)
