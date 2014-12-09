@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	herokuAppDir = "./app"
+	herokuAppDir = "app"
 )
 
 var (

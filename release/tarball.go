@@ -65,7 +65,8 @@ func writeAppDir(tarball *tar.Writer, appDir string) {
 	}
 	now := time.Now()
 	header := &tar.Header{
-		Name:       appDir,
+		// "./" needs to preceed all files in a heroku slug.
+		Name:       "./" + appDir,
 		Mode:       int64(os.ModePerm | tarIsDir),
 		Uid:        uid,
 		Gid:        gid,
@@ -95,7 +96,9 @@ func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, directory string,
 		if err != nil {
 			log.Fatal(err)
 		}
-		tarHeader.Name = path.Join(destPrefix, tarHeader.Name)
+		// As in writeAppDir, "./" always needs to preceed entries in a
+		// heroku slug.
+		tarHeader.Name = "./" + path.Join(destPrefix, tarHeader.Name)
 		tarball.WriteHeader(tarHeader)
 		io.Copy(tarball, src)
 
