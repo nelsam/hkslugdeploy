@@ -84,7 +84,6 @@ func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, directory string,
 		if directory != "" {
 			srcName = path.Join(directory, srcName)
 		}
-		dstName := path.Join(destPrefix, srcName)
 
 		src, err := os.Open(srcName)
 		if err != nil {
@@ -107,7 +106,7 @@ func archiveFiles(tarball *tar.Writer, srcFiles []os.FileInfo, directory string,
 			if err != nil {
 				log.Fatal(err)
 			}
-			archiveFiles(tarball, contents, srcName, dstName)
+			archiveFiles(tarball, contents, srcName, destPrefix)
 		}
 	}
 }
