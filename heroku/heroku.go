@@ -10,19 +10,19 @@ import (
 	"github.com/nelsam/hkslugdeploy/curl"
 )
 
-func StartRelease(app string, procs map[string]string, email string, key string, build string) chan bool {
+func StartRelease(app string, procs map[string]string, email string, key string, build string, commitish string) chan bool {
 	done := make(chan bool)
 	go func() {
-		Release(app, procs, email, key, build)
+		Release(app, procs, email, key, build, commitish)
 		done <- true
 	}()
 	return done
 }
 
-func Release(app string, procs map[string]string, email string, key string, build string) {
+func Release(app string, procs map[string]string, email string, key string, build string, commitish string) {
 	client := &heroku.Client{Username: email, Password: key}
 	log.Print("[heroku] Creating release slug")
-	slug, err := client.SlugCreate(app, procs, nil)
+	slug, err := client.SlugCreate(app, procs, &heroku.SlugCreateOpts{Commit: &commitish})
 	if err != nil {
 		log.Fatalf("[heroku][error] %s", err)
 	}

@@ -81,7 +81,7 @@ func main() {
 		}
 	}
 	if herokuApp != "" {
-		done := heroku.StartRelease(herokuApp, map[string]string{"web": herokuWebProc}, herokuEmail, herokuKey, tarName)
+		done := heroku.StartRelease(herokuApp, map[string]string{"web": herokuWebProc}, herokuEmail, herokuKey, tarName, gitCommitish)
 		if sequential {
 			<-done
 		} else {
