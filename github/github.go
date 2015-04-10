@@ -68,8 +68,8 @@ func releaseUploadURL(releaseName string, releaseDesc string, commitish string, 
 		log.Fatalf("[github][error] %s", err)
 	}
 	if resp.StatusCode >= http.StatusBadRequest {
-		log.Printf("Error message: %v", respFields["message"])
-		log.Printf("Github errors: %v", respFields["errors"])
+		log.Printf("[github][error] Message: %v", respFields["message"])
+		log.Printf("[github][error] Errors: %v", respFields["errors"])
 		log.Fatalf("[github][error] Release returned status %s", resp.Status)
 	}
 	return respFields["upload_url"].(string)
