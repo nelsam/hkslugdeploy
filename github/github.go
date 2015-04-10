@@ -59,9 +59,6 @@ func releaseUploadURL(releaseName string, releaseDesc string, commitish string, 
 		log.Fatalf("[github][error] %s", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= http.StatusBadRequest {
-		log.Fatalf("[github][error] Release returned status %s", resp.Status)
-	}
 	respBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalf("[github][error] %s", err)
@@ -69,6 +66,11 @@ func releaseUploadURL(releaseName string, releaseDesc string, commitish string, 
 	var respFields map[string]interface{}
 	if err := json.Unmarshal(respBytes, &respFields); err != nil {
 		log.Fatalf("[github][error] %s", err)
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		log.Printf("Error message: %v", respFields["message"])
+		log.Printf("Github errors: %v", respFields["errors"])
+		log.Fatalf("[github][error] Release returned status %s", resp.Status)
 	}
 	return respFields["upload_url"].(string)
 }
