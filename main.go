@@ -28,6 +28,7 @@ var (
 	herokuWebProc     string
 	herokuEmail       string
 	herokuKey         string
+	herokuWorkerProc  string
 	selectedFilenames []string
 )
 
@@ -56,6 +57,8 @@ func init() {
 		"The email address for logging in to heroku.")
 	flag.StringVar(&herokuKey, "heroku-token", "",
 		"The password or access token to use when logging in to heroku.")
+	flag.StringVar(&herokuWorkerProc, "heroku-worker-proc", "",
+		"The name of the worker process to execute. Must be provided in the list of files to include in the binary.")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s [options] release_files...\n\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "Creates a heroku slug tarball (.tar.gz) out of the provided release_files, and "+
@@ -81,7 +84,11 @@ func main() {
 		}
 	}
 	if herokuApp != "" {
-		done := heroku.StartRelease(herokuApp, map[string]string{"web": herokuWebProc}, herokuEmail, herokuKey, tarName, gitCommitish)
+		procs := map[string]string{"web": herokuWebProc}
+		if herokuWorkerProc != "" {
+			procs["worker"] = herokuWorkerProc
+		}
+		done := heroku.StartRelease(herokuApp, procs, herokuEmail, herokuKey, tarName, gitCommitish)
 		if sequential {
 			<-done
 		} else {
